@@ -5,7 +5,7 @@ extern GPIO_InitTypeDef dht_sensor;
 
 void DHT_Raw_Read(uint8_t Data[4])
 {
-  uint8_t buffer[5];
+  uint8_t buffer[] = {0,0,0,0,0};
   uint8_t i = 0;
   uint8_t j = 0;
   uint8_t checksum = 0;
@@ -32,21 +32,21 @@ void DHT_Raw_Read(uint8_t Data[4])
   //1 wire from sensor decode starts here
   
   //cycle for every buffer byte
-  for(i = 0; i < 6; i++)
+  for(i = 0; i <= 5; i++)
   {
     // cycle for every bit
-    for(j = 0; j < 8; j++)
+    for(j = 8; j > 0; j--)
     {
       //sensor pulls low for 50 uS so we need to wait it out
       while(! HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
       uS_Delay(35);
       if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin))
       {
-        buffer[i] |= (1 << (7 - j));
+        buffer[i] |= (1 << (j - 1));
       }
       else
       {
-        buffer[i] &= ~(1 << (7 - j));                                      
+        buffer[i] &= ~(1 << (j - 1)); 
       }                                                      
     }                                                        
   }                                                          
