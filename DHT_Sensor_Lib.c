@@ -16,6 +16,7 @@ void DHT_Raw_Read(uint8_t Data[4])
   // Write 0 to pin for 18 milliseconds to prepare sensor
   HAL_GPIO_WritePin(DHT_Port,DHT_Pin, GPIO_PIN_RESET);
   uS_Delay(18000);
+
   
   // Set pin as input
   GPIO_setInput(DHT_Port,DHT_Pin);
@@ -35,18 +36,20 @@ void DHT_Raw_Read(uint8_t Data[4])
   for(i = 0; i <= 5; i++)
   {
     // cycle for every bit
-    for(j = 8; j > 0; j--)
+    for(j = 0; j < 8; j++)
     {
       //sensor pulls low for 50 uS so we need to wait it out
       while(! HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
-      uS_Delay(35);
+      uS_Delay(30);
       if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin))
       {
-        buffer[i] |= (1 << (j - 1));
+        buffer[i] |= (1 << (7 - j));
+        //important line to skip the rest of the 70uS of "1" bit, but doesnt exit loop after transmission end
+        while(DHT_Port->IDR &= (1 << 1));
       }
       else
       {
-        buffer[i] &= ~(1 << (j - 1)); 
+        buffer[i] &= ~(1 << (7 - j)); 
       }                                                      
     }                                                        
   }                                                          
