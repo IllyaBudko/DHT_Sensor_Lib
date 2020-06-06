@@ -8,6 +8,7 @@ void DHT_Raw_Read(uint8_t Data[4])
   uint8_t buffer[] = {0,0,0,0,0};
   uint8_t i = 0;
   uint8_t j = 0;
+  uint8_t cnt = 0;
   uint8_t checksum = 0;
   
   // Set pin as output
@@ -33,11 +34,13 @@ void DHT_Raw_Read(uint8_t Data[4])
   //1 wire from sensor decode starts here
   
   //cycle for every buffer byte
-  for(i = 0; i <= 5; i++)
+
+  for(i = 0; i < 6; i++)
   {
     // cycle for every bit
     for(j = 0; j < 8; j++)
     {
+      cnt++;
       //sensor pulls low for 50 uS so we need to wait it out
       while(! HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
       uS_Delay(30);
@@ -45,20 +48,28 @@ void DHT_Raw_Read(uint8_t Data[4])
       {
         buffer[i] |= (1 << (7 - j));
         //important line to skip the rest of the 70uS of "1" bit, but doesnt exit loop after transmission end
-        while(DHT_Port->IDR &= (1 << 1));
+        while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin))
+        {
+          if(cnt < 41)
+          {
+            break;
+          }
+        }
       }
       else
       {
-        buffer[i] &= ~(1 << (7 - j)); 
-      }                                                      
-    }                                                        
-  }                                                          
-  //checksum here for status
+        buffer[i] &= ~(1 << (7 - j));
+      }
+    }   
+  }
   
+  //checksum here for status
+
   Data[0] = buffer[0];
   Data[1] = buffer[1];
   Data[2] = buffer[2];
   Data[3] = buffer[3];
+
 }
 
 
