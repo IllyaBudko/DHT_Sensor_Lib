@@ -9,6 +9,7 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
   uint8_t i = 0;
   uint8_t j = 0;
   uint8_t cnt = 0;
+  uint16_t timeout = 0;
   uint8_t checksum = 0;
   
   DHT_State_t DHT_State = DHT_OK;
@@ -29,21 +30,52 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
     since the data line is pulled up externally we need to wait
     for the sensor to take over the line after the pin is set as input
   */
-  while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
+  timeout = 0;
+  if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
+  {
+    while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
+    {
+      uS_Delay(1);
+      timeout++;
+      if(timeout >= 1000)
+      {
+        DHT_State = DHT_ERROR_Timeout;
+      }
+    }
+  }
   /******************************************************RESPONSE **********************************************************************/
   //DHT sensor first responds with low for 80uS then high for 80uS we wait those out
-  uS_Delay(40);
-  if(! HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) || DHT_State == DHT_OK)
+  if((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
   {
-    while(! HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
+    // removed delay, using timeout as timing :S
+    timeout = 0;
+    while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
+    {
+      uS_Delay(1);
+      timeout++;
+      if(timeout >= 1000)
+      {
+        DHT_State = DHT_ERROR_Timeout;
+      }
+    }
   }
   else
   {
     DHT_State = DHT_ERROR_Response;
   }
-  if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) || DHT_State == DHT_OK)
+  
+  timeout = 0;
+  if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
   {
-    while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
+    while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
+    {
+      uS_Delay(1);
+      timeout++;
+      if(timeout >= 1000)
+      {
+        DHT_State = DHT_ERROR_Timeout;
+      }
+    }
   }
   else
   {
@@ -61,13 +93,22 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
       {
         cnt++;
         //sensor pulls low for 50 uS so we need to wait it out
-        while(! HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
+        timeout = 0;
+        while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
+        {
+          uS_Delay(1);
+          timeout++;
+          if(timeout >= 1000)
+          {
+            DHT_State = DHT_ERROR_Timeout;
+          }
+        }
         uS_Delay(28);
-        if(! HAL_GPIO_ReadPin(DHT_Port,DHT_Pin))
+        if((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
         {
           buffer[i] &= ~(1 << (7 - j));
         }
-        else
+        else if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
         {
           buffer[i] |= (1 << (7 - j));
           
@@ -75,7 +116,16 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
           if(cnt < 40)
           {
             //important line to skip the rest of the 70uS of "1" bit
-            while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
+            timeout = 0;
+            while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
+            {
+              uS_Delay(1);
+              timeout++;
+              if(timeout >= 1000)
+              {
+                DHT_State = DHT_ERROR_Timeout;
+              }
+            }
           }
         }
       }   
