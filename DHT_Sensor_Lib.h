@@ -20,7 +20,7 @@ typedef enum
 
 
 
-void DHT_Raw_Read(uint8_t Data[4]);
+DHT_State_t DHT_Raw_Read(uint8_t Data[4]);
 
 
 
