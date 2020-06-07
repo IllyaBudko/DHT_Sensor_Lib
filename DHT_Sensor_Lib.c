@@ -43,22 +43,20 @@ void DHT_Raw_Read(uint8_t Data[4])
       cnt++;
       //sensor pulls low for 50 uS so we need to wait it out
       while(! HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
-      uS_Delay(30);
-      if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin))
+      uS_Delay(28);
+      if(! HAL_GPIO_ReadPin(DHT_Port,DHT_Pin))
       {
-        buffer[i] |= (1 << (7 - j));
-        //important line to skip the rest of the 70uS of "1" bit, but doesnt exit loop after transmission end
-        while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin))
-        {
-          if(cnt < 41)
-          {
-            break;
-          }
-        }
+        buffer[i] &= ~(1 << (7 - j));
       }
       else
       {
-        buffer[i] &= ~(1 << (7 - j));
+        buffer[i] |= (1 << (7 - j));
+        
+        if(cnt < 40)
+        {
+          //important line to skip the rest of the 70uS of "1" bit, but doesnt exit loop after transmission end
+          while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin));
+        }
       }
     }   
   }
