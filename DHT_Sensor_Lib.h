@@ -8,6 +8,15 @@
 #define DHT_Port    GPIOA
 #define DHT_Pin     (uint16_t)GPIO_PIN_1
 
+typedef enum
+{
+  DHT_OK,
+  DHT_ERROR_Response,
+  DHT_ERROR_Timeout,
+  DHT_ERROR_Checksum
+}DHT_State_t;
+
+
 
 
 
