@@ -18,6 +18,11 @@ typedef enum
 
 
 
+/**/
+
+
+
+
 
 
 DHT_State_t DHT_Raw_Read(uint8_t Data[4]);
