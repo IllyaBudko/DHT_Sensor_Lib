@@ -149,6 +149,21 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
   return DHT_State;
 }
 
+__weak void DHT_Error_Handler(DHT_State_t State)
+{
+  switch (State)
+  {
+    case DHT_ERROR_Timeout:
+      break;
+    case DHT_ERROR_Response:
+      break;
+    case DHT_ERROR_Checksum:
+      break;
+    default:
+      break;
+  }
+}
+
 void uS_Delay(uint16_t uSeconds)
 {
   TIM6->CR1 |= (1 << 0);

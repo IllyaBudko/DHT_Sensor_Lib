@@ -19,6 +19,7 @@ typedef enum
 }DHT_State_t;
 
 DHT_State_t DHT_Raw_Read(uint8_t Data[4]);
+__weak void DHT_Error_Handler(DHT_State_t State);
 
 void uS_Delay(uint16_t uSeconds);
 void GPIO_setInput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin);
