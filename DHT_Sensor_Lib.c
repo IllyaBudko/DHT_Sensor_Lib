@@ -164,11 +164,11 @@ __weak void DHT_Error_Handler(DHT_State_t State)
   }
 }
 
-void uS_Delay(uint16_t uSeconds)
+void uS_Delay(uint16_t uSeconds,TIM_HandleTypeDef dht_tim)
 {
-  TIM6->CR1 |= (1 << 0);
-  __HAL_TIM_SET_COUNTER(&htim6,0);
-  while(__HAL_TIM_GET_COUNTER(&htim6) < uSeconds);
+  dht_tim.Instance->CR1 |= (1 << 0);
+  __HAL_TIM_SET_COUNTER(&dht_tim,0);
+  while(__HAL_TIM_GET_COUNTER(&dht_tim) < uSeconds);
 }
 
 void GPIO_setInput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
@@ -189,3 +189,9 @@ void GPIO_setOutput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
   
   HAL_GPIO_Init(GPIOx, &dht_sensor);
 }
+
+
+
+
+
+
