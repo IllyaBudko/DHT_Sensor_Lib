@@ -173,7 +173,7 @@ void uS_Delay(uint16_t uSeconds,TIM_HandleTypeDef dht_tim)
 
 void GPIO_setInput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
 {
-  dht_sensor.Mode = GPIO_MODE_INPUT;
+  dht_sensor.Mode = GPIO_MODE_INPUT; 
   dht_sensor.Pull = GPIO_NOPULL;
   dht_sensor.Pin  = GPIO_Pin;
   
