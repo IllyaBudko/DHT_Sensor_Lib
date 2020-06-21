@@ -30,9 +30,11 @@ typedef struct
   GPIO_TypeDef       *dht_input_instance;
   uint32_t            dht_input_pin;
   DHT_State_t         dht_state;
+  uint16_t            timeout;
+  uint8_t             buffer[5];
   uint8_t             humidity[2];           //[0] integer humidity, [1] decimal humidity
   uint8_t             temperature[2];        //[0] integer temperature, [1] decimal temperature
-  uint8_t             checksum;
+  uint8_t             sent_checksum;
   
 }DHT_Handle_t;
 
@@ -55,6 +57,11 @@ void DHT_uS_Delay(DHT_Handle_t dht_handle, uint16_t uS_Delay);
 /////////////////////// Helper Functions ////////////////////////////
 void DHT_setInput(DHT_Handle_t dht_handle);
 void DHT_setOutput(DHT_Handle_t dht_handle);
+
+void Master_Transmit_Start(DHT_Handle_t dht_handle);
+void Slave_Receive_Response(DHT_Handle_t dht_handle);
+void Byte_Read(DHT_Handle_t dht_handle, uint8_t whichByte);
+void Checksum_Verify(DHT_Handle_t dht_handle);
 
 ////////////////////////// Version 2.0 //////////////////////////////
 #endif /*__DHT_SENSOR_LIB_H*/

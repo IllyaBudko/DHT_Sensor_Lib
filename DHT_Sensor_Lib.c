@@ -88,7 +88,7 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
   if(DHT_State == DHT_OK)
   {
     //cycle for every buffer byte
-    for(i = 0; i < 6; i++)
+    for(i = 0; i < 5; i++)
     {
       // cycle for every bit
       for(j = 0; j < 8; j++)
@@ -223,7 +223,22 @@ void DHT_Init(DHT_Handle_t dht_handle)
 
 void DHT_Read(DHT_Handle_t dht_handle)
 {
-  
+  uint8_t i = 0;
+  //1.Master send start
+  Master_Transmit_Start(dht_handle);
+  //2.Decode receive
+  if(dht_handle.dht_state == DHT_OK)
+  {
+    //cycle for every buffer byte
+    for(i = 0; i < 4; i++)
+    {
+      Byte_Read(dht_handle,i);
+    }
+    Byte_Read(dht_handle,4); 
+  }
+  //3.Verify checksum
+  Checksum_Verify(dht_handle);
+  //4....
 }
 
 void DHT_uS_Delay(DHT_Handle_t dht_handle, uint16_t uS_Delay)
@@ -249,6 +264,141 @@ void DHT_setOutput(DHT_Handle_t dht_handle)
   dht_handle.dht_input_init.Pin  = dht_handle.dht_input_pin;
   
   HAL_GPIO_Init(dht_handle.dht_input_instance, &(dht_handle.dht_input_init));
+}
+
+void Master_Transmit_Start(DHT_Handle_t dht_handle)
+{
+  DHT_setOutput(dht_handle);
+    // Write 0 to pin for 18 milliseconds to prepare sensor
+  HAL_GPIO_WritePin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin), GPIO_PIN_RESET);
+  DHT_uS_Delay(dht_handle,18000);
+
+  
+  // Set pin as input
+  DHT_setInput(dht_handle);
+  
+  /* 
+    since the data line is pulled up externally we need to wait
+    for the sensor to take over the line after the pin is set as input
+  */
+  dht_handle.timeout = 0;
+  if(HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin)) && (dht_handle.dht_state) == DHT_OK)
+  {
+    while(HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin)) && (dht_handle.dht_state) == DHT_OK)
+    {
+      DHT_uS_Delay(dht_handle,2);
+      dht_handle.timeout++;
+      if(dht_handle.timeout >= 500)
+      {
+        dht_handle.dht_state = DHT_ERROR_Timeout;
+      }
+    }
+  }
+}
+void Slave_Receive_Response(DHT_Handle_t dht_handle)
+{
+  if((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && (dht_handle.dht_state) == DHT_OK)
+  {
+    // removed delay, using timeout as timing :S
+    dht_handle.timeout = 0;
+    while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && (dht_handle.dht_state) == DHT_OK)
+    {
+      DHT_uS_Delay(dht_handle,2);
+      dht_handle.timeout++;
+      if(dht_handle.timeout >= 1000)
+      {
+        dht_handle.dht_state = DHT_ERROR_Timeout;
+      }
+    }
+  }
+  else
+  {
+    dht_handle.dht_state = DHT_ERROR_Response;
+  }
+  
+  dht_handle.timeout = 0;
+  if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && (dht_handle.dht_state) == DHT_OK)
+  {
+    while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && (dht_handle.dht_state) == DHT_OK)
+    {
+      DHT_uS_Delay(dht_handle,2);
+      dht_handle.timeout++;
+      if(dht_handle.timeout >= 1000)
+      {
+        dht_handle.dht_state = DHT_ERROR_Timeout;
+      }
+    }
+  }
+  else
+  {
+    dht_handle.dht_state = DHT_ERROR_Response;
+  }
+}
+
+void Byte_Read(DHT_Handle_t dht_handle, uint8_t whichByte)
+{
+  uint8_t j = 0;
+  uint8_t cnt = 0;
+  for(j = 0; j < 8; j++)
+  {
+    cnt++;
+    //sensor pulls low for 50 uS so we need to wait it out
+    dht_handle.timeout = 0;
+    while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && (dht_handle.dht_state) == DHT_OK)
+    {
+      DHT_uS_Delay(dht_handle,2);
+      dht_handle.timeout++;
+      if(dht_handle.timeout >= 500)
+      {
+        dht_handle.dht_state = DHT_ERROR_Timeout;
+      }
+    }
+    uS_Delay(28,htim6);
+    if((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && (dht_handle.dht_state) == DHT_OK)
+    {
+      dht_handle.buffer[whichByte] &= ~(1 << (7 - j));
+    }
+    else if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && (dht_handle.dht_state) == DHT_OK)
+    {
+      dht_handle.buffer[whichByte] |= (1 << (7 - j));
+      
+      // cnt is used to not be stuck in infinite loop on the last bit read
+      if(cnt < 40)
+      {
+        //important line to skip the rest of the 70uS of "1" bit
+        dht_handle.timeout = 0;
+        while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && (dht_handle.dht_state) == DHT_OK)
+        {
+          DHT_uS_Delay(dht_handle,2);
+          dht_handle.timeout++;
+          if(dht_handle.timeout >= 500)
+          {
+            dht_handle.dht_state = DHT_ERROR_Timeout;
+          }
+        }
+      }
+    }
+  }
+}
+
+void Checksum_Verify(DHT_Handle_t dht_handle)
+{
+  if(dht_handle.dht_state == DHT_OK)
+  {
+    dht_handle.sent_checksum = dht_handle.buffer[4];
+    uint8_t data_checksum = dht_handle.buffer[0] + dht_handle.buffer[1] + dht_handle.buffer[2] + dht_handle.buffer[3];
+    if(dht_handle.sent_checksum == data_checksum)
+    {
+      dht_handle.humidity[0] = dht_handle.buffer[0];
+      dht_handle.humidity[1] = dht_handle.buffer[1];
+      dht_handle.temperature[0] = dht_handle.buffer[2];
+      dht_handle.temperature[1] = dht_handle.buffer[3];
+    }
+    else
+    {
+      dht_handle.dht_state = DHT_ERROR_Checksum;
+    }
+  }
 }
 
 ////////////////////////// Version 2.0 //////////////////////////////
