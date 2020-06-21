@@ -3,6 +3,8 @@
 extern TIM_HandleTypeDef htim6;
 extern GPIO_InitTypeDef dht_sensor;
 
+////////////////////////// Version 1.0 //////////////////////////////
+
 DHT_State_t DHT_Raw_Read(uint8_t Data[4])
 {
   uint8_t buffer[] = {0,0,0,0,0};
@@ -159,6 +161,8 @@ __weak void DHT_Error_Handler(DHT_State_t State)
       break;
     case DHT_ERROR_Checksum:
       break;
+    case DHT_ERROR_Init:
+      break;
     default:
       break;
   }
@@ -189,6 +193,35 @@ void GPIO_setOutput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
   
   HAL_GPIO_Init(GPIOx, &dht_sensor);
 }
+////////////////////////// Version 1.0 //////////////////////////////
+
+////////////////////////// Version 2.0 //////////////////////////////
+
+DHT_State_t DHT_Init(DHT_Handle_t dht_handle)
+{
+  //1. Setup GPIO Pin for data acquisition
+  
+  //2. Setup TIM for uS delay 
+  //2.a. Enable timer
+  dht_handle.dht_tim_handle.Instance->CR1 |= (1 << 0);
+  
+  return dht_handle.dht_state;
+}
+
+void DHT_Read(DHT_Handle_t dht_handle)
+{
+  
+}
+
+void uS_Handle_Delay(uint16_t uSeconds,DHT_Handle_t dht_handle)
+{
+//  dht_handle.dht_tim_handle.Instance->CR1 |= (1 << 0);
+  __HAL_TIM_SET_COUNTER(&(dht_handle.dht_tim_handle),0);
+  while(__HAL_TIM_GET_COUNTER(&(dht_handle.dht_tim_handle)) < uSeconds);
+}
+
+////////////////////////// Version 2.0 //////////////////////////////
+
 
 
 
