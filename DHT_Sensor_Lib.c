@@ -22,7 +22,7 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
   
   // Write 0 to pin for 18 milliseconds to prepare sensor
   HAL_GPIO_WritePin(DHT_Port,DHT_Pin, GPIO_PIN_RESET);
-  uS_Delay(18000);
+  uS_Delay(18000,htim6);
 
   
   // Set pin as input
@@ -37,7 +37,7 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
   {
     while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
     {
-      uS_Delay(1);
+      uS_Delay(1,htim6);
       timeout++;
       if(timeout >= 1000)
       {
@@ -53,7 +53,7 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
     timeout = 0;
     while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
     {
-      uS_Delay(1);
+      uS_Delay(1,htim6);
       timeout++;
       if(timeout >= 1000)
       {
@@ -71,7 +71,7 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
   {
     while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
     {
-      uS_Delay(1);
+      uS_Delay(1,htim6);
       timeout++;
       if(timeout >= 1000)
       {
@@ -98,14 +98,14 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
         timeout = 0;
         while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
         {
-          uS_Delay(1);
+          uS_Delay(1,htim6);
           timeout++;
           if(timeout >= 1000)
           {
             DHT_State = DHT_ERROR_Timeout;
           }
         }
-        uS_Delay(28);
+        uS_Delay(28,htim6);
         if((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
         {
           buffer[i] &= ~(1 << (7 - j));
@@ -121,7 +121,7 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
             timeout = 0;
             while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
             {
-              uS_Delay(1);
+              uS_Delay(1,htim6);
               timeout++;
               if(timeout >= 1000)
               {
@@ -236,11 +236,19 @@ void DHT_uS_Delay(DHT_Handle_t dht_handle, uint16_t uS_Delay)
 /////////////////////// Helper Functions ////////////////////////////
 void DHT_setInput(DHT_Handle_t dht_handle)
 {
+  dht_handle.dht_input_init.Mode = GPIO_MODE_INPUT;
+  dht_handle.dht_input_init.Pull = GPIO_NOPULL;
+  dht_handle.dht_input_init.Pin  = dht_handle.dht_input_pin;
   
+  HAL_GPIO_Init(dht_handle.dht_input_instance, &(dht_handle.dht_input_init));
 }
 void DHT_setOutput(DHT_Handle_t dht_handle)
 {
+  dht_handle.dht_input_init.Mode = GPIO_MODE_OUTPUT_OD;
+  dht_handle.dht_input_init.Pull = GPIO_NOPULL;
+  dht_handle.dht_input_init.Pin  = dht_handle.dht_input_pin;
   
+  HAL_GPIO_Init(dht_handle.dht_input_instance, &(dht_handle.dht_input_init));
 }
 
 ////////////////////////// Version 2.0 //////////////////////////////
