@@ -230,11 +230,10 @@ void DHT_Read(DHT_Handle_t dht_handle)
   if(dht_handle.dht_state == DHT_OK)
   {
     //cycle for every buffer byte
-    for(i = 0; i < 4; i++)
+    for(i = 0; i < 5; i++)
     {
       Byte_Read(dht_handle,i);
-    }
-    Byte_Read(dht_handle,4); 
+    }      
   }
   //3.Verify checksum
   Checksum_Verify(dht_handle);
@@ -297,11 +296,11 @@ void Master_Transmit_Start(DHT_Handle_t dht_handle)
 }
 void Slave_Receive_Response(DHT_Handle_t dht_handle)
 {
-  if((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && (dht_handle.dht_state) == DHT_OK)
+  if((!HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin))) && (dht_handle.dht_state) == DHT_OK)
   {
     // removed delay, using timeout as timing :S
     dht_handle.timeout = 0;
-    while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && (dht_handle.dht_state) == DHT_OK)
+    while((!HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin))) && (dht_handle.dht_state) == DHT_OK)
     {
       DHT_uS_Delay(dht_handle,2);
       dht_handle.timeout++;
@@ -317,9 +316,9 @@ void Slave_Receive_Response(DHT_Handle_t dht_handle)
   }
   
   dht_handle.timeout = 0;
-  if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && (dht_handle.dht_state) == DHT_OK)
+  if(HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin)) && (dht_handle.dht_state) == DHT_OK)
   {
-    while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && (dht_handle.dht_state) == DHT_OK)
+    while(HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin)) && (dht_handle.dht_state) == DHT_OK)
     {
       DHT_uS_Delay(dht_handle,2);
       dht_handle.timeout++;
@@ -344,7 +343,7 @@ void Byte_Read(DHT_Handle_t dht_handle, uint8_t whichByte)
     cnt++;
     //sensor pulls low for 50 uS so we need to wait it out
     dht_handle.timeout = 0;
-    while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && (dht_handle.dht_state) == DHT_OK)
+    while((!HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin))) && (dht_handle.dht_state) == DHT_OK)
     {
       DHT_uS_Delay(dht_handle,2);
       dht_handle.timeout++;
@@ -353,12 +352,12 @@ void Byte_Read(DHT_Handle_t dht_handle, uint8_t whichByte)
         dht_handle.dht_state = DHT_ERROR_Timeout;
       }
     }
-    uS_Delay(28,htim6);
-    if((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && (dht_handle.dht_state) == DHT_OK)
+    DHT_uS_Delay(dht_handle,28);
+    if((!HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin))) && (dht_handle.dht_state) == DHT_OK)
     {
       dht_handle.buffer[whichByte] &= ~(1 << (7 - j));
     }
-    else if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && (dht_handle.dht_state) == DHT_OK)
+    else if(HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin)) && (dht_handle.dht_state) == DHT_OK)
     {
       dht_handle.buffer[whichByte] |= (1 << (7 - j));
       
@@ -367,7 +366,7 @@ void Byte_Read(DHT_Handle_t dht_handle, uint8_t whichByte)
       {
         //important line to skip the rest of the 70uS of "1" bit
         dht_handle.timeout = 0;
-        while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && (dht_handle.dht_state) == DHT_OK)
+        while(HAL_GPIO_ReadPin((dht_handle.dht_input_instance),(dht_handle.dht_input_pin)) && (dht_handle.dht_state) == DHT_OK)
         {
           DHT_uS_Delay(dht_handle,2);
           dht_handle.timeout++;
