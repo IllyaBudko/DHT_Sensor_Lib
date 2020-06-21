@@ -32,8 +32,8 @@ typedef struct
   DHT_State_t         dht_state;
   uint16_t            timeout;
   uint8_t             buffer[5];
-  uint8_t             humidity[2];           //[0] integer humidity, [1] decimal humidity
-  uint8_t             temperature[2];        //[0] integer temperature, [1] decimal temperature
+  uint8_t             humidity[2];                //[0] integer humidity, [1] decimal humidity
+  uint8_t             temperature[2];             //[0] integer temperature, [1] decimal temperature
   uint8_t             sent_checksum;
   
 }DHT_Handle_t;
