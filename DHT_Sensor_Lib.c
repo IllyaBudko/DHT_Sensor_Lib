@@ -197,15 +197,28 @@ void GPIO_setOutput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
 
 ////////////////////////// Version 2.0 //////////////////////////////
 
-DHT_State_t DHT_Init(DHT_Handle_t dht_handle)
+void DHT_Init(DHT_Handle_t dht_handle)
 {
+  uint32_t HCLK_freq;
+  HCLK_freq = HAL_RCC_GetHCLKFreq();
   //1. Setup GPIO Pin for data acquisition
+  dht_handle.dht_input_init.Mode = GPIO_MODE_OUTPUT_OD;
+  dht_handle.dht_input_init.Pull = GPIO_NOPULL;
+  dht_handle.dht_input_init.Pin  = dht_handle.dht_input_pin;
   
-  //2. Setup TIM for uS delay 
-  //2.a. Enable timer
-  dht_handle.dht_tim_handle.Instance->CR1 |= (1 << 0);
+  HAL_GPIO_Init(dht_handle.dht_input_instance, &(dht_handle.dht_input_init));
   
-  return dht_handle.dht_state;
+  //2. Setup TIM for uS delay
+  dht_handle.dht_tim_handle.Instance                = dht_handle.dht_tim_instance;
+  dht_handle.dht_tim_handle.Init.Prescaler          = (HCLK_freq/1000000) - 1;
+  dht_handle.dht_tim_handle.Init.CounterMode        = TIM_COUNTERMODE_UP;
+  dht_handle.dht_tim_handle.Init.Period             = 0xFFFF-1;
+  dht_handle.dht_tim_handle.Init.AutoReloadPreload  = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  
+  if(HAL_TIM_Base_Init(&(dht_handle.dht_tim_handle)) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 void DHT_Read(DHT_Handle_t dht_handle)
@@ -213,11 +226,21 @@ void DHT_Read(DHT_Handle_t dht_handle)
   
 }
 
-void uS_Handle_Delay(uint16_t uSeconds,DHT_Handle_t dht_handle)
+void DHT_uS_Delay(DHT_Handle_t dht_handle, uint16_t uS_Delay)
 {
 //  dht_handle.dht_tim_handle.Instance->CR1 |= (1 << 0);
   __HAL_TIM_SET_COUNTER(&(dht_handle.dht_tim_handle),0);
-  while(__HAL_TIM_GET_COUNTER(&(dht_handle.dht_tim_handle)) < uSeconds);
+  while(__HAL_TIM_GET_COUNTER(&(dht_handle.dht_tim_handle)) < uS_Delay);
+}
+
+/////////////////////// Helper Functions ////////////////////////////
+void DHT_setInput(DHT_Handle_t dht_handle)
+{
+  
+}
+void DHT_setOutput(DHT_Handle_t dht_handle)
+{
+  
 }
 
 ////////////////////////// Version 2.0 //////////////////////////////
