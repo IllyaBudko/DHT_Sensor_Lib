@@ -55,10 +55,14 @@ void DHT_Init(DHT_Handle_t *dht_handle);
 void DHT_Read(DHT_Handle_t *dht_handle);
 void DHT_uS_Delay(DHT_Handle_t *dht_handle, uint16_t uS_Delay);
 
+DHT_State_t DHT_Get_State(DHT_Handle_t *dht_handle);
+
 
 /////////////////////// Helper Functions ////////////////////////////
 void DHT_setInput(DHT_Handle_t *dht_handle);
 void DHT_setOutput(DHT_Handle_t *dht_handle);
+
+void DHT_Check_Timeout(DHT_Handle_t *dht_handle,uint16_t uSeconds);
 
 void Master_Transmit_Start(DHT_Handle_t *dht_handle);
 void Slave_Receive_Response(DHT_Handle_t *dht_handle);
