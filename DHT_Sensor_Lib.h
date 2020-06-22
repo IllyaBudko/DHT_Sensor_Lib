@@ -1,6 +1,8 @@
 #ifndef  __DHT_SENSOR_LIB_H
 #define  __DHT_SENSOR_LIB_H
 
+
+///////////////
 #include <stdio.h>
 #include <stdint.h>
 #include "main.h"
@@ -32,8 +34,8 @@ typedef struct
   DHT_State_t         dht_state;
   uint16_t            timeout;
   uint8_t             buffer[5];
-  uint8_t             humidity[2];           //[0] integer humidity, [1] decimal humidity
-  uint8_t             temperature[2];        //[0] integer temperature, [1] decimal temperature
+  uint8_t             humidity[2];                //[0] integer humidity, [1] decimal humidity
+  uint8_t             temperature[2];             //[0] integer temperature, [1] decimal temperature
   uint8_t             sent_checksum;
   
 }DHT_Handle_t;
@@ -49,19 +51,19 @@ void GPIO_setOutput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin);
 
 ////////////////////////// Version 2.0 //////////////////////////////
 
-void DHT_Init(DHT_Handle_t dht_handle);
-void DHT_Read(DHT_Handle_t dht_handle);
-void DHT_uS_Delay(DHT_Handle_t dht_handle, uint16_t uS_Delay);
+void DHT_Init(DHT_Handle_t *dht_handle);
+void DHT_Read(DHT_Handle_t *dht_handle);
+void DHT_uS_Delay(DHT_Handle_t *dht_handle, uint16_t uS_Delay);
 
 
 /////////////////////// Helper Functions ////////////////////////////
-void DHT_setInput(DHT_Handle_t dht_handle);
-void DHT_setOutput(DHT_Handle_t dht_handle);
+void DHT_setInput(DHT_Handle_t *dht_handle);
+void DHT_setOutput(DHT_Handle_t *dht_handle);
 
-void Master_Transmit_Start(DHT_Handle_t dht_handle);
-void Slave_Receive_Response(DHT_Handle_t dht_handle);
-void Byte_Read(DHT_Handle_t dht_handle, uint8_t whichByte);
-void Checksum_Verify(DHT_Handle_t dht_handle);
+void Master_Transmit_Start(DHT_Handle_t *dht_handle);
+void Slave_Receive_Response(DHT_Handle_t *dht_handle);
+void Byte_Read(DHT_Handle_t *dht_handle, uint8_t whichByte);
+void Checksum_Verify(DHT_Handle_t *dht_handle);
 
 ////////////////////////// Version 2.0 //////////////////////////////
 #endif /*__DHT_SENSOR_LIB_H*/
