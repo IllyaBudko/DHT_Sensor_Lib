@@ -25,12 +25,12 @@ DHT_State_t DHT_Raw_Read(uint8_t Data[4])
   uS_Delay(18000,htim6);
 
   
-  // Set pin as input
+  // Set pin as gpio
   GPIO_setInput(DHT_Port,DHT_Pin);
   
   /* 
     since the data line is pulled up externally we need to wait
-    for the sensor to take over the line after the pin is set as input
+    for the sensor to take over the line after the pin is set as gpio
   */
   timeout = 0;
   if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
@@ -197,214 +197,219 @@ void GPIO_setOutput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
 
 ////////////////////////// Version 2.0 //////////////////////////////
 
-void DHT_Init(DHT_Handle_t *dht_handle)
+__weak void DHT_Initialization(DHT_Handle_t *hdht)
+{
+  
+}
+
+void DHT_Init(DHT_Handle_t *hdht)
 {
   uint32_t HCLK_freq;
   HCLK_freq = HAL_RCC_GetHCLKFreq();
   //1. Setup GPIO Pin for data acquisition
-  dht_handle->dht_input_init.Mode = GPIO_MODE_OUTPUT_OD;
-  dht_handle->dht_input_init.Pull = GPIO_NOPULL;
-  dht_handle->dht_input_init.Pin  = dht_handle->dht_input_pin;
+  hdht->dht_gpio_init.Mode = GPIO_MODE_OUTPUT_OD;
+  hdht->dht_gpio_init.Pull = GPIO_NOPULL;
+  hdht->dht_gpio_init.Pin  = hdht->dht_gpio_pin;
   
-  HAL_GPIO_Init(dht_handle->dht_input_instance, &(dht_handle->dht_input_init));
+  HAL_GPIO_Init(hdht->dht_gpio_instance, &(hdht->dht_gpio_init));
   
   //2. Setup TIM for uS delay
-  dht_handle->dht_tim_handle.Instance                = dht_handle->dht_tim_instance;
-  dht_handle->dht_tim_handle.Init.Prescaler          = (HCLK_freq/1000000) - 1;
-  dht_handle->dht_tim_handle.Init.CounterMode        = TIM_COUNTERMODE_UP;
-  dht_handle->dht_tim_handle.Init.Period             = 0xFFFF-1;
-  dht_handle->dht_tim_handle.Init.AutoReloadPreload  = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  hdht->dht_tim_handle.Instance                = hdht->dht_tim_instance;
+  hdht->dht_tim_handle.Init.Prescaler          = (HCLK_freq/1000000) - 1;
+  hdht->dht_tim_handle.Init.CounterMode        = TIM_COUNTERMODE_UP;
+  hdht->dht_tim_handle.Init.Period             = 0xFFFF-1;
+  hdht->dht_tim_handle.Init.AutoReloadPreload  = TIM_AUTORELOAD_PRELOAD_DISABLE;
   
-  if(HAL_TIM_Base_Init(&(dht_handle->dht_tim_handle)) != HAL_OK)
+  if(HAL_TIM_Base_Init(&(hdht->dht_tim_handle)) != HAL_OK)
   {
     Error_Handler();
   }
   
-  if(HAL_TIM_Base_Start(&(dht_handle->dht_tim_handle)) != HAL_OK)
+  if(HAL_TIM_Base_Start(&(hdht->dht_tim_handle)) != HAL_OK)
   {
     Error_Handler();
   }
 }
 
-void DHT_Read(DHT_Handle_t *dht_handle)
+void DHT_Read(DHT_Handle_t *hdht)
 {
   uint8_t i = 0;
   //Master send start
-  Master_Transmit_Start(dht_handle);
+  Master_Transmit_Start(hdht);
   //Receive slave response
-  Slave_Receive_Response(dht_handle);
+  Slave_Receive_Response(hdht);
   //Decode receive
-  if(dht_handle->dht_state == DHT_OK)
+  if(hdht->dht_state == DHT_OK)
   {
     //cycle for every buffer byte
     for(i = 0; i < 5; i++)
     {
-      Byte_Read(dht_handle,i);
+      Byte_Read(hdht,i);
     }      
   }
   //Verify checksum
-  Checksum_Verify(dht_handle);
+  Checksum_Verify(hdht);
 }
 
-void DHT_uS_Delay(DHT_Handle_t *dht_handle, uint16_t uS_Delay)
+void DHT_uS_Delay(DHT_Handle_t *hdht, uint16_t uS_Delay)
 {
-  dht_handle->dht_tim_instance->CNT = 0;
-  while(dht_handle->dht_tim_instance->CNT <= uS_Delay);
+  hdht->dht_tim_instance->CNT = 0;
+  while(hdht->dht_tim_instance->CNT <= uS_Delay);
 }
 
-DHT_State_t DHT_Get_State(DHT_Handle_t *dht_handle)
+DHT_State_t DHT_Get_State(DHT_Handle_t *hdht)
 {
-  return dht_handle->dht_state;
+  return hdht->dht_state;
 }
 
 /////////////////////// Helper Functions ////////////////////////////
-void DHT_setInput(DHT_Handle_t *dht_handle)
+void DHT_setInput(DHT_Handle_t *hdht)
 {
-  dht_handle->dht_input_init.Mode = GPIO_MODE_INPUT;
-  dht_handle->dht_input_init.Pull = GPIO_NOPULL;
-  dht_handle->dht_input_init.Pin  = dht_handle->dht_input_pin;
+  hdht->dht_gpio_init.Mode = GPIO_MODE_INPUT;
+  hdht->dht_gpio_init.Pull = GPIO_NOPULL;
+  hdht->dht_gpio_init.Pin  = hdht->dht_gpio_pin;
   
-  HAL_GPIO_Init(dht_handle->dht_input_instance, &(dht_handle->dht_input_init));
+  HAL_GPIO_Init(hdht->dht_gpio_instance, &(hdht->dht_gpio_init));
 }
-void DHT_setOutput(DHT_Handle_t *dht_handle)
+void DHT_setOutput(DHT_Handle_t *hdht)
 {
-  dht_handle->dht_input_init.Mode = GPIO_MODE_OUTPUT_OD;
-  dht_handle->dht_input_init.Pull = GPIO_NOPULL;
-  dht_handle->dht_input_init.Pin  = dht_handle->dht_input_pin;
+  hdht->dht_gpio_init.Mode = GPIO_MODE_OUTPUT_OD;
+  hdht->dht_gpio_init.Pull = GPIO_NOPULL;
+  hdht->dht_gpio_init.Pin  = hdht->dht_gpio_pin;
   
-  HAL_GPIO_Init(dht_handle->dht_input_instance, &(dht_handle->dht_input_init));
+  HAL_GPIO_Init(hdht->dht_gpio_instance, &(hdht->dht_gpio_init));
 }
 
-void DHT_Check_Timeout(DHT_Handle_t *dht_handle,uint16_t uSeconds)
+void DHT_Check_Timeout(DHT_Handle_t *hdht,uint16_t uSeconds)
 {
   //Needs implementation //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
-void Master_Transmit_Start(DHT_Handle_t *dht_handle)
+void Master_Transmit_Start(DHT_Handle_t *hdht)
 {
-  DHT_setOutput(dht_handle);
+  DHT_setOutput(hdht);
     // Write 0 to pin for 18 milliseconds to prepare sensor
-  HAL_GPIO_WritePin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin), GPIO_PIN_RESET);
-  DHT_uS_Delay(dht_handle,18000);
+  HAL_GPIO_WritePin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin), GPIO_PIN_RESET);
+  DHT_uS_Delay(hdht,18000);
 
   
-  // Set pin as input
-  DHT_setInput(dht_handle);
+  // Set pin as gpio
+  DHT_setInput(hdht);
   
   /* 
     since the data line is pulled up externally we need to wait
-    for the sensor to take over the line after the pin is set as input
+    for the sensor to take over the line after the pin is set as gpio
   */
-  dht_handle->timeout = 0;
-  if(HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin)) && (dht_handle->dht_state) == DHT_OK)
+  hdht->timeout = 0;
+  if(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
   {
-    while(HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin)) && (dht_handle->dht_state) == DHT_OK)
+    while(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
     {
-      DHT_uS_Delay(dht_handle,2);
-      dht_handle->timeout++;
-      if(dht_handle->timeout >= 500)
+      DHT_uS_Delay(hdht,2);
+      hdht->timeout++;
+      if(hdht->timeout >= 500)
       {
-        dht_handle->dht_state = DHT_ERROR_Timeout;
+        hdht->dht_state = DHT_ERROR_Timeout;
       }
     }
   }
 }
-void Slave_Receive_Response(DHT_Handle_t *dht_handle)
+void Slave_Receive_Response(DHT_Handle_t *hdht)
 {
-  if((!HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin))) && (dht_handle->dht_state) == DHT_OK)
+  if((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
   {
     // removed delay, using timeout as timing :S
-    dht_handle->timeout = 0;
-    while((!HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin))) && (dht_handle->dht_state) == DHT_OK)
+    hdht->timeout = 0;
+    while((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
     {
-      DHT_uS_Delay(dht_handle,2);
-      dht_handle->timeout++;
-      if(dht_handle->timeout >= 1000)
+      DHT_uS_Delay(hdht,2);
+      hdht->timeout++;
+      if(hdht->timeout >= 1000)
       {
-        dht_handle->dht_state = DHT_ERROR_Timeout;
+        hdht->dht_state = DHT_ERROR_Timeout;
       }
     }
   }
   else
   {
-    dht_handle->dht_state = DHT_ERROR_Response;
+    hdht->dht_state = DHT_ERROR_Response;
   }
   
-  dht_handle->timeout = 0;
-  if(HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin)) && (dht_handle->dht_state) == DHT_OK)
+  hdht->timeout = 0;
+  if(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
   {
-    while(HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin)) && (dht_handle->dht_state) == DHT_OK)
+    while(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
     {
-      DHT_uS_Delay(dht_handle,2);
-      dht_handle->timeout++;
-      if(dht_handle->timeout >= 1000)
+      DHT_uS_Delay(hdht,2);
+      hdht->timeout++;
+      if(hdht->timeout >= 1000)
       {
-        dht_handle->dht_state = DHT_ERROR_Timeout;
+        hdht->dht_state = DHT_ERROR_Timeout;
       }
     }
   }
   else
   {
-    dht_handle->dht_state = DHT_ERROR_Response;
+    hdht->dht_state = DHT_ERROR_Response;
   }
 }
 
-void Byte_Read(DHT_Handle_t *dht_handle, uint8_t whichByte)
+void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte)
 {
   uint8_t j = 0;
   for(j = 0; j < 8; j++)
   {
     //sensor pulls low for 50 uS so we need to wait it out
-    dht_handle->timeout = 0;
-    while((!HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin))) && (dht_handle->dht_state) == DHT_OK)
+    hdht->timeout = 0;
+    while((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
     {
-      DHT_uS_Delay(dht_handle,2);
-      dht_handle->timeout++;
-      if(dht_handle->timeout >= 500)
+      DHT_uS_Delay(hdht,2);
+      hdht->timeout++;
+      if(hdht->timeout >= 500)
       {
-        dht_handle->dht_state = DHT_ERROR_Timeout;
+        hdht->dht_state = DHT_ERROR_Timeout;
       }
     }
-    DHT_uS_Delay(dht_handle,28);
-    if((!HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin))) && (dht_handle->dht_state) == DHT_OK)
+    DHT_uS_Delay(hdht,28);
+    if((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
     {
-      dht_handle->buffer[whichByte] &= ~(1 << (7 - j));
+      hdht->buffer[whichByte] &= ~(1 << (7 - j));
     }
-    else if(HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin)) && (dht_handle->dht_state) == DHT_OK)
+    else if(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
     {
-      dht_handle->buffer[whichByte] |= (1 << (7 - j));
+      hdht->buffer[whichByte] |= (1 << (7 - j));
 
       //important line to skip the rest of the 70uS of "1" bit
-      dht_handle->timeout = 0;
-      while(HAL_GPIO_ReadPin((dht_handle->dht_input_instance),(dht_handle->dht_input_pin)) && (dht_handle->dht_state) == DHT_OK)
+      hdht->timeout = 0;
+      while(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
       {
-        DHT_uS_Delay(dht_handle,2);
-        dht_handle->timeout++;
-        if(dht_handle->timeout >= 500)
+        DHT_uS_Delay(hdht,2);
+        hdht->timeout++;
+        if(hdht->timeout >= 500)
         {
-          dht_handle->dht_state = DHT_ERROR_Timeout;
+          hdht->dht_state = DHT_ERROR_Timeout;
         }
       }
     }
   }
 }
 
-void Checksum_Verify(DHT_Handle_t *dht_handle)
+void Checksum_Verify(DHT_Handle_t *hdht)
 {
-  if(dht_handle->dht_state == DHT_OK)
+  if(hdht->dht_state == DHT_OK)
   {
-    dht_handle->sent_checksum = dht_handle->buffer[4];
-    uint8_t data_checksum = dht_handle->buffer[0] + dht_handle->buffer[1] + dht_handle->buffer[2] + dht_handle->buffer[3];
-    if(dht_handle->sent_checksum == data_checksum)
+    hdht->sent_checksum = hdht->buffer[4];
+    uint8_t data_checksum = hdht->buffer[0] + hdht->buffer[1] + hdht->buffer[2] + hdht->buffer[3];
+    if(hdht->sent_checksum == data_checksum)
     {
-      dht_handle->humidity[0] = dht_handle->buffer[0];
-      dht_handle->humidity[1] = dht_handle->buffer[1];
-      dht_handle->temperature[0] = dht_handle->buffer[2];
-      dht_handle->temperature[1] = dht_handle->buffer[3];
+      hdht->humidity[0] = hdht->buffer[0];
+      hdht->humidity[1] = hdht->buffer[1];
+      hdht->temperature[0] = hdht->buffer[2];
+      hdht->temperature[1] = hdht->buffer[3];
     }
     else
     {
-      dht_handle->dht_state = DHT_ERROR_Checksum;
+      hdht->dht_state = DHT_ERROR_Checksum;
     }
   }
 }

@@ -28,9 +28,9 @@ typedef struct
 {
   TIM_HandleTypeDef   dht_tim_handle;
   TIM_TypeDef        *dht_tim_instance;
-  GPIO_InitTypeDef    dht_input_init;
-  GPIO_TypeDef       *dht_input_instance;
-  uint32_t            dht_input_pin;
+  GPIO_InitTypeDef    dht_gpio_init;
+  GPIO_TypeDef       *dht_gpio_instance;
+  uint32_t            dht_gpio_pin;
   DHT_State_t         dht_state;
   uint16_t            timeout;
   uint8_t             buffer[5];
@@ -51,23 +51,25 @@ void GPIO_setOutput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin);
 
 ////////////////////////// Version 2.0 //////////////////////////////
 
-void DHT_Init(DHT_Handle_t *dht_handle);
-void DHT_Read(DHT_Handle_t *dht_handle);
-void DHT_uS_Delay(DHT_Handle_t *dht_handle, uint16_t uS_Delay);
+__weak void DHT_Initialization(DHT_Handle_t *hdht);
 
-DHT_State_t DHT_Get_State(DHT_Handle_t *dht_handle);
+void DHT_Init(DHT_Handle_t *hdht);
+void DHT_Read(DHT_Handle_t *hdht);
+void DHT_uS_Delay(DHT_Handle_t *hdht, uint16_t uS_Delay);
+
+DHT_State_t DHT_Get_State(DHT_Handle_t *hdht);
 
 
 /////////////////////// Helper Functions ////////////////////////////
-void DHT_setInput(DHT_Handle_t *dht_handle);
-void DHT_setOutput(DHT_Handle_t *dht_handle);
+void DHT_setInput(DHT_Handle_t *hdht);
+void DHT_setOutput(DHT_Handle_t *hdht);
 
-void DHT_Check_Timeout(DHT_Handle_t *dht_handle,uint16_t uSeconds);
+void DHT_Check_Timeout(DHT_Handle_t *hdht,uint16_t uSeconds);
 
-void Master_Transmit_Start(DHT_Handle_t *dht_handle);
-void Slave_Receive_Response(DHT_Handle_t *dht_handle);
-void Byte_Read(DHT_Handle_t *dht_handle, uint8_t whichByte);
-void Checksum_Verify(DHT_Handle_t *dht_handle);
+void Master_Transmit_Start(DHT_Handle_t *hdht);
+void Slave_Receive_Response(DHT_Handle_t *hdht);
+void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte);
+void Checksum_Verify(DHT_Handle_t *hdht);
 
 ////////////////////////// Version 2.0 //////////////////////////////
 #endif /*__DHT_SENSOR_LIB_H*/
