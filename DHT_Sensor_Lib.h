@@ -1,19 +1,21 @@
 #ifndef  __DHT_SENSOR_LIB_H
 #define  __DHT_SENSOR_LIB_H
 
-
-///////////////
 #include <stdio.h>
 #include <stdint.h>
 #include "main.h"
 
-#define DHT_Port    GPIOA
-#define DHT_Pin     (uint16_t)GPIO_PIN_1
+/*
+  Function:
+  ---------------------------------------------------------
+  Description:
+  
+  Param:
+  
+  Return Value:
+*/
 
-#define uMilliSec   (uint8_t)0
-#define uMicroSec   (uint8_t)1
 
-/*Fix 1*/
 
 typedef enum
 {
@@ -40,20 +42,12 @@ typedef struct
   
 }DHT_Handle_t;
 
-////////////////////////// Version 1.0 //////////////////////////////
-DHT_State_t DHT_Raw_Read(uint8_t Data[4]);
-__weak void DHT_Error_Handler(DHT_State_t State);
+/*
+  DHT Sensor APIs
+*/
+__weak void DHT_OneWire_Init(DHT_Handle_t *hdht);
+__weak void DHT_Error_Handler(DHT_Handle_t *hdht);
 
-void uS_Delay(uint16_t uSeconds,TIM_HandleTypeDef dht_tim);
-void GPIO_setInput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin);
-void GPIO_setOutput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin);
-////////////////////////// Version 1.0 //////////////////////////////
-
-////////////////////////// Version 2.0 //////////////////////////////
-
-__weak void DHT_Initialization(DHT_Handle_t *hdht);
-
-void DHT_Init(DHT_Handle_t *hdht);
 void DHT_Read(DHT_Handle_t *hdht);
 void DHT_uS_Delay(DHT_Handle_t *hdht, uint16_t uS_Delay);
 
@@ -66,10 +60,10 @@ void DHT_setOutput(DHT_Handle_t *hdht);
 
 void DHT_Check_Timeout(DHT_Handle_t *hdht,uint16_t uSeconds);
 
+DHT_State_t DHT_Init(DHT_Handle_t *hdht);
 void Master_Transmit_Start(DHT_Handle_t *hdht);
 void Slave_Receive_Response(DHT_Handle_t *hdht);
 void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte);
 void Checksum_Verify(DHT_Handle_t *hdht);
 
-////////////////////////// Version 2.0 //////////////////////////////
 #endif /*__DHT_SENSOR_LIB_H*/

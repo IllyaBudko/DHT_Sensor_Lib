@@ -1,208 +1,74 @@
 #include "main.h"
 
-extern TIM_HandleTypeDef htim6;
-extern GPIO_InitTypeDef dht_sensor;
+/*Function: DHT_OneWire_Init
+  ---------------------------------------------------------
+  Note:
+  - Weak DHT sensor one wire(aosong 1-wire) initialization function, that inititializes the data line to GPIOA, GPIO_PIN_1;
+  - Should be implemented in user file;
+  
+  Param: hdht DHT_Handle_t structure to be initialized
+  
+  Return Value: None
+*/
 
-////////////////////////// Version 1.0 //////////////////////////////
-
-DHT_State_t DHT_Raw_Read(uint8_t Data[4])
+__weak void DHT_OneWire_Init(DHT_Handle_t *hdht)
 {
-  uint8_t buffer[] = {0,0,0,0,0};
-  uint8_t i = 0;
-  uint8_t j = 0;
-  uint8_t cnt = 0;
-  uint16_t timeout = 0;
-  uint8_t checksum = 0;
+  hdht->dht_gpio_instance = GPIOA;
+  hdht->dht_gpio_pin      = GPIO_PIN_1;
+  hdht->dht_tim_instance  = TIM6;
   
-  DHT_State_t DHT_State = DHT_OK;
-  
-  /******************************************************MASTER START SIGNAL **********************************************************************/
-  // Set pin as output
-  GPIO_setOutput(DHT_Port,DHT_Pin);
-  
-  // Write 0 to pin for 18 milliseconds to prepare sensor
-  HAL_GPIO_WritePin(DHT_Port,DHT_Pin, GPIO_PIN_RESET);
-  uS_Delay(18000,htim6);
-
-  
-  // Set pin as gpio
-  GPIO_setInput(DHT_Port,DHT_Pin);
-  
-  /* 
-    since the data line is pulled up externally we need to wait
-    for the sensor to take over the line after the pin is set as gpio
-  */
-  timeout = 0;
-  if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
+  if(DHT_Init(hdht) != DHT_OK)
   {
-    while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
-    {
-      uS_Delay(1,htim6);
-      timeout++;
-      if(timeout >= 1000)
-      {
-        DHT_State = DHT_ERROR_Timeout;
-      }
-    }
+    DHT_Error_Handler(hdht);
   }
-  /******************************************************RESPONSE **********************************************************************/
-  //DHT sensor first responds with low for 80uS then high for 80uS we wait those out
-  if((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
-  {
-    // removed delay, using timeout as timing :S
-    timeout = 0;
-    while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
-    {
-      uS_Delay(1,htim6);
-      timeout++;
-      if(timeout >= 1000)
-      {
-        DHT_State = DHT_ERROR_Timeout;
-      }
-    }
-  }
-  else
-  {
-    DHT_State = DHT_ERROR_Response;
-  }
-  
-  timeout = 0;
-  if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
-  {
-    while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
-    {
-      uS_Delay(1,htim6);
-      timeout++;
-      if(timeout >= 1000)
-      {
-        DHT_State = DHT_ERROR_Timeout;
-      }
-    }
-  }
-  else
-  {
-    DHT_State = DHT_ERROR_Response;
-  }
-  
-  /******************************************************DECODE **********************************************************************/
-  if(DHT_State == DHT_OK)
-  {
-    //cycle for every buffer byte
-    for(i = 0; i < 5; i++)
-    {
-      // cycle for every bit
-      for(j = 0; j < 8; j++)
-      {
-        cnt++;
-        //sensor pulls low for 50 uS so we need to wait it out
-        timeout = 0;
-        while((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
-        {
-          uS_Delay(1,htim6);
-          timeout++;
-          if(timeout >= 1000)
-          {
-            DHT_State = DHT_ERROR_Timeout;
-          }
-        }
-        uS_Delay(28,htim6);
-        if((!HAL_GPIO_ReadPin(DHT_Port,DHT_Pin)) && DHT_State == DHT_OK)
-        {
-          buffer[i] &= ~(1 << (7 - j));
-        }
-        else if(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
-        {
-          buffer[i] |= (1 << (7 - j));
-          
-          // cnt is used to not be stuck in infinite loop on the last bit read
-          if(cnt < 40)
-          {
-            //important line to skip the rest of the 70uS of "1" bit
-            timeout = 0;
-            while(HAL_GPIO_ReadPin(DHT_Port,DHT_Pin) && DHT_State == DHT_OK)
-            {
-              uS_Delay(1,htim6);
-              timeout++;
-              if(timeout >= 1000)
-              {
-                DHT_State = DHT_ERROR_Timeout;
-              }
-            }
-          }
-        }
-      }   
-    }
-  }
-  
-  /******************************************************CHECKSUM **********************************************************************/
-  checksum = buffer[0] + buffer[1] + buffer[2] + buffer[3];
-  if(checksum == buffer[4])
-  {
-    Data[0] = buffer[0];
-    Data[1] = buffer[1];
-    Data[2] = buffer[2];
-    Data[3] = buffer[3];
-  }
-  else
-  {
-    DHT_State = DHT_ERROR_Checksum;
-  }
-    /******************************************************STATE RETURN **********************************************************************/
-  return DHT_State;
 }
 
-__weak void DHT_Error_Handler(DHT_State_t State)
+/*Function: DHT_Error_Handler
+  ---------------------------------------------------------
+  Note:
+  - Weak DHT error handler to handle errors according to the DHT_State_t enum in specific DHT_Handle_t
+  - Should be implemented in user file;
+  
+  Param: hdht DHT_Handle_t structure for which to handle error
+  
+  Return Value: None
+*/
+
+__weak void DHT_Error_Handler(DHT_Handle_t *hdht)
 {
-  switch (State)
+  switch (DHT_Get_State(hdht))
   {
     case DHT_ERROR_Timeout:
+      while(1);
       break;
     case DHT_ERROR_Response:
+      while(1);
       break;
     case DHT_ERROR_Checksum:
+      while(1);
       break;
     case DHT_ERROR_Init:
+      while(1);
       break;
     default:
+      while(1);
       break;
   }
 }
 
-void uS_Delay(uint16_t uSeconds,TIM_HandleTypeDef dht_tim)
-{
-  dht_tim.Instance->CR1 |= (1 << 0);
-  __HAL_TIM_SET_COUNTER(&dht_tim,0);
-  while(__HAL_TIM_GET_COUNTER(&dht_tim) < uSeconds);
-}
-
-void GPIO_setInput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
-{
-  dht_sensor.Mode = GPIO_MODE_INPUT; 
-  dht_sensor.Pull = GPIO_NOPULL;
-  dht_sensor.Pin  = GPIO_Pin;
+/*Function: DHT_Init
+  ---------------------------------------------------------
+  Note:
+  - Initializes gpio pin for use with DHT Sensor
+  - Initializes timer to tick with 1uS interval
+  - Starts timer
   
-  HAL_GPIO_Init(GPIOx, &dht_sensor);
+  Param: hdht DHT_Handle_t structure which contains initialization values
   
-}
+  Return Value: DHT_State_t enum value
+*/
 
-void GPIO_setOutput(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
-{
-  dht_sensor.Mode = GPIO_MODE_OUTPUT_OD;
-  dht_sensor.Pull = GPIO_NOPULL;
-  dht_sensor.Pin  = GPIO_Pin;
-  
-  HAL_GPIO_Init(GPIOx, &dht_sensor);
-}
-////////////////////////// Version 1.0 //////////////////////////////
-
-////////////////////////// Version 2.0 //////////////////////////////
-
-__weak void DHT_Initialization(DHT_Handle_t *hdht)
-{
-  
-}
-
-void DHT_Init(DHT_Handle_t *hdht)
+DHT_State_t DHT_Init(DHT_Handle_t *hdht)
 {
   uint32_t HCLK_freq;
   HCLK_freq = HAL_RCC_GetHCLKFreq();
@@ -222,14 +88,30 @@ void DHT_Init(DHT_Handle_t *hdht)
   
   if(HAL_TIM_Base_Init(&(hdht->dht_tim_handle)) != HAL_OK)
   {
+    hdht->dht_state = DHT_ERROR_Init;
     Error_Handler();
   }
   
   if(HAL_TIM_Base_Start(&(hdht->dht_tim_handle)) != HAL_OK)
   {
     Error_Handler();
+    hdht->dht_state = DHT_ERROR_Init;
   }
+  
+  return hdht->dht_state;
 }
+
+/*Function: DHT_Read
+  ---------------------------------------------------------
+  Note:
+  - Wrapper function that reads 40 bits of  data incoming from DHT sensor
+  - Writes data back into DHT_Handle_t structure, in the form of a buffer, which then prepares a humidity array and a temperature array
+  - Verifies checksum sent by DHT Sensor
+  
+  Param: hdht DHT_Handle_t structure to be used
+  
+  Return Value: None
+*/
 
 void DHT_Read(DHT_Handle_t *hdht)
 {
@@ -251,11 +133,15 @@ void DHT_Read(DHT_Handle_t *hdht)
   Checksum_Verify(hdht);
 }
 
-void DHT_uS_Delay(DHT_Handle_t *hdht, uint16_t uS_Delay)
-{
-  hdht->dht_tim_instance->CNT = 0;
-  while(hdht->dht_tim_instance->CNT <= uS_Delay);
-}
+/*Function: DHT_Get_State
+  ---------------------------------------------------------
+  Note:
+  - Gets DHT structure state
+  
+  Param: hdht DHT_Handle_t structure to be used
+  
+  Return Value: DHT_State_t enum value
+*/
 
 DHT_State_t DHT_Get_State(DHT_Handle_t *hdht)
 {
@@ -263,6 +149,35 @@ DHT_State_t DHT_Get_State(DHT_Handle_t *hdht)
 }
 
 /////////////////////// Helper Functions ////////////////////////////
+
+/*Function: DHT_uS_Delay
+  ---------------------------------------------------------
+  Note:
+  - Delay function that ticks with 1uS
+  
+  Param: 
+  - hdht DHT_Handle_t structure to be used
+  - Delay value in uS
+  
+  Return Value: None
+*/
+
+void DHT_uS_Delay(DHT_Handle_t *hdht, uint16_t uS_Delay)
+{
+  hdht->dht_tim_instance->CNT = 0;
+  while(hdht->dht_tim_instance->CNT <= uS_Delay);
+}
+
+/*Function: DHT_setInput
+  ---------------------------------------------------------
+  Note:
+  - Gets DHT structure state
+  
+  Param: hdht DHT_Handle_t structure to be used
+  
+  Return Value: DHT_State_t enum value
+*/
+
 void DHT_setInput(DHT_Handle_t *hdht)
 {
   hdht->dht_gpio_init.Mode = GPIO_MODE_INPUT;
@@ -282,35 +197,33 @@ void DHT_setOutput(DHT_Handle_t *hdht)
 
 void DHT_Check_Timeout(DHT_Handle_t *hdht,uint16_t uSeconds)
 {
-  //Needs implementation //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  DHT_uS_Delay(hdht,1);
+  hdht->timeout++;
+  if(hdht->timeout >= uSeconds)
+  {
+    hdht->dht_state = DHT_ERROR_Timeout;
+    hdht->timeout = 0;
+  }
 }
 
 void Master_Transmit_Start(DHT_Handle_t *hdht)
 {
   DHT_setOutput(hdht);
-    // Write 0 to pin for 18 milliseconds to prepare sensor
+  // Write 0 to pin for 18 milliseconds to prepare sensor
   HAL_GPIO_WritePin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin), GPIO_PIN_RESET);
   DHT_uS_Delay(hdht,18000);
 
-  
   // Set pin as gpio
   DHT_setInput(hdht);
-  
   /* 
     since the data line is pulled up externally we need to wait
     for the sensor to take over the line after the pin is set as gpio
   */
-  hdht->timeout = 0;
   if(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
   {
     while(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
     {
-      DHT_uS_Delay(hdht,2);
-      hdht->timeout++;
-      if(hdht->timeout >= 500)
-      {
-        hdht->dht_state = DHT_ERROR_Timeout;
-      }
+      DHT_Check_Timeout(hdht,500);
     }
   }
 }
@@ -318,16 +231,9 @@ void Slave_Receive_Response(DHT_Handle_t *hdht)
 {
   if((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
   {
-    // removed delay, using timeout as timing :S
-    hdht->timeout = 0;
     while((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
     {
-      DHT_uS_Delay(hdht,2);
-      hdht->timeout++;
-      if(hdht->timeout >= 1000)
-      {
-        hdht->dht_state = DHT_ERROR_Timeout;
-      }
+      DHT_Check_Timeout(hdht,500);
     }
   }
   else
@@ -335,17 +241,11 @@ void Slave_Receive_Response(DHT_Handle_t *hdht)
     hdht->dht_state = DHT_ERROR_Response;
   }
   
-  hdht->timeout = 0;
   if(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
   {
     while(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
     {
-      DHT_uS_Delay(hdht,2);
-      hdht->timeout++;
-      if(hdht->timeout >= 1000)
-      {
-        hdht->dht_state = DHT_ERROR_Timeout;
-      }
+      DHT_Check_Timeout(hdht,500);
     }
   }
   else
@@ -356,19 +256,12 @@ void Slave_Receive_Response(DHT_Handle_t *hdht)
 
 void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte)
 {
-  uint8_t j = 0;
-  for(j = 0; j < 8; j++)
+  for(uint8_t j = 0; j < 8; j++)
   {
     //sensor pulls low for 50 uS so we need to wait it out
-    hdht->timeout = 0;
     while((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
     {
-      DHT_uS_Delay(hdht,2);
-      hdht->timeout++;
-      if(hdht->timeout >= 500)
-      {
-        hdht->dht_state = DHT_ERROR_Timeout;
-      }
+      DHT_Check_Timeout(hdht,500);
     }
     DHT_uS_Delay(hdht,28);
     if((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
@@ -380,15 +273,9 @@ void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte)
       hdht->buffer[whichByte] |= (1 << (7 - j));
 
       //important line to skip the rest of the 70uS of "1" bit
-      hdht->timeout = 0;
       while(HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin)) && (hdht->dht_state) == DHT_OK)
       {
-        DHT_uS_Delay(hdht,2);
-        hdht->timeout++;
-        if(hdht->timeout >= 500)
-        {
-          hdht->dht_state = DHT_ERROR_Timeout;
-        }
+        DHT_Check_Timeout(hdht,500);
       }
     }
   }
@@ -413,12 +300,3 @@ void Checksum_Verify(DHT_Handle_t *hdht)
     }
   }
 }
-
-////////////////////////// Version 2.0 //////////////////////////////
-
-
-
-
-
-
-
