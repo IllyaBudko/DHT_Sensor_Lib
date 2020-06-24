@@ -200,6 +200,10 @@ void DHT_Check_Timeout(DHT_Handle_t *hdht,uint16_t uSeconds)
     hdht->dht_state = DHT_ERROR_Timeout;
     hdht->timeout = 0;
   }
+  else
+  {
+    hdht->timeout = 0;
+  }
 }
 
 /*Function: DHT_setInput
@@ -260,6 +264,7 @@ void DHT_setOutput(DHT_Handle_t *hdht)
 
 void Master_Transmit_Start(DHT_Handle_t *hdht)
 {
+  hdht->dht_state = DHT_OK;
   DHT_setOutput(hdht);
   // Write 0 to pin for 18 milliseconds to prepare sensor
   HAL_GPIO_WritePin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin), GPIO_PIN_RESET);
@@ -277,6 +282,7 @@ void Master_Transmit_Start(DHT_Handle_t *hdht)
     {
       DHT_Check_Timeout(hdht,500);
     }
+    for(uint8_t j = 0; j< 10; j++);
   }
 }
 
@@ -300,6 +306,7 @@ void Slave_Receive_Response(DHT_Handle_t *hdht)
     {
       DHT_Check_Timeout(hdht,500);
     }
+    for(uint8_t j = 0; j< 10; j++);
   }
   else
   {
@@ -312,6 +319,7 @@ void Slave_Receive_Response(DHT_Handle_t *hdht)
     {
       DHT_Check_Timeout(hdht,500);
     }
+    for(uint8_t j = 0; j< 10; j++);
   }
   else
   {
@@ -341,6 +349,7 @@ void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte)
     {
       DHT_Check_Timeout(hdht,500);
     }
+    for(uint8_t j = 0; j< 10; j++);
     DHT_uS_Delay(hdht,28);
     if((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
     {
@@ -355,6 +364,7 @@ void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte)
       {
         DHT_Check_Timeout(hdht,500);
       }
+      for(uint8_t j = 0; j< 10; j++);
     }
   }
 }
