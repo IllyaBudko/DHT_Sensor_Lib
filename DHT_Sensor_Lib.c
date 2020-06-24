@@ -1,12 +1,17 @@
 #include "main.h"
 
+/*
+  DHT Sensor APIs  ====================================================================
+*/
+
 /*Function: DHT_OneWire_Init
   ---------------------------------------------------------
   Note:
   - Weak DHT sensor one wire(aosong 1-wire) initialization function, that inititializes the data line to GPIOA, GPIO_PIN_1;
   - Should be implemented in user file;
   
-  Param: hdht DHT_Handle_t structure to be initialized
+  Param:
+   - hdht, DHT_Handle_t structure to be initialized
   
   Return Value: None
 */
@@ -29,7 +34,8 @@ __weak void DHT_OneWire_Init(DHT_Handle_t *hdht)
   - Weak DHT error handler to handle errors according to the DHT_State_t enum in specific DHT_Handle_t
   - Should be implemented in user file;
   
-  Param: hdht DHT_Handle_t structure for which to handle error
+  Param:
+  - hdht, DHT_Handle_t structure for which to handle error
   
   Return Value: None
 */
@@ -56,6 +62,59 @@ __weak void DHT_Error_Handler(DHT_Handle_t *hdht)
   }
 }
 
+/*Function: DHT_Read
+  ---------------------------------------------------------
+  Note:
+  - Wrapper function that reads 40 bits of  data incoming from DHT sensor
+  - Writes data back into DHT_Handle_t structure, in the form of a buffer, which then prepares a humidity array and a temperature array
+  - Verifies checksum sent by DHT Sensor
+  
+  Param:
+   - hdht, DHT_Handle_t structure to be used
+  
+  Return Value: None
+*/
+
+void DHT_Read(DHT_Handle_t *hdht)
+{
+  uint8_t i = 0;
+  //Master send start
+  Master_Transmit_Start(hdht);
+  //Receive slave response
+  Slave_Receive_Response(hdht);
+  //Decode receive
+  if(hdht->dht_state == DHT_OK)
+  {
+    //cycle for every buffer byte
+    for(i = 0; i < 5; i++)
+    {
+      Byte_Read(hdht,i);
+    }      
+  }
+  //Verify checksum
+  Checksum_Verify(hdht);
+}
+
+/*Function: DHT_Get_State
+  ---------------------------------------------------------
+  Note:
+  - Gets DHT structure state
+  
+  Param:
+  - hdht, DHT_Handle_t structure to be used
+  
+  Return Value: DHT_State_t enum value
+*/
+
+DHT_State_t DHT_Get_State(DHT_Handle_t *hdht)
+{
+  return hdht->dht_state;
+}
+
+/*
+  DHT Helper function used inside APIs  ====================================================================
+*/
+
 /*Function: DHT_Init
   ---------------------------------------------------------
   Note:
@@ -63,7 +122,8 @@ __weak void DHT_Error_Handler(DHT_Handle_t *hdht)
   - Initializes timer to tick with 1uS interval
   - Starts timer
   
-  Param: hdht DHT_Handle_t structure which contains initialization values
+  Param:
+  - hdht, DHT_Handle_t structure which contains initialization values
   
   Return Value: DHT_State_t enum value
 */
@@ -101,63 +161,14 @@ DHT_State_t DHT_Init(DHT_Handle_t *hdht)
   return hdht->dht_state;
 }
 
-/*Function: DHT_Read
-  ---------------------------------------------------------
-  Note:
-  - Wrapper function that reads 40 bits of  data incoming from DHT sensor
-  - Writes data back into DHT_Handle_t structure, in the form of a buffer, which then prepares a humidity array and a temperature array
-  - Verifies checksum sent by DHT Sensor
-  
-  Param: hdht DHT_Handle_t structure to be used
-  
-  Return Value: None
-*/
-
-void DHT_Read(DHT_Handle_t *hdht)
-{
-  uint8_t i = 0;
-  //Master send start
-  Master_Transmit_Start(hdht);
-  //Receive slave response
-  Slave_Receive_Response(hdht);
-  //Decode receive
-  if(hdht->dht_state == DHT_OK)
-  {
-    //cycle for every buffer byte
-    for(i = 0; i < 5; i++)
-    {
-      Byte_Read(hdht,i);
-    }      
-  }
-  //Verify checksum
-  Checksum_Verify(hdht);
-}
-
-/*Function: DHT_Get_State
-  ---------------------------------------------------------
-  Note:
-  - Gets DHT structure state
-  
-  Param: hdht DHT_Handle_t structure to be used
-  
-  Return Value: DHT_State_t enum value
-*/
-
-DHT_State_t DHT_Get_State(DHT_Handle_t *hdht)
-{
-  return hdht->dht_state;
-}
-
-/////////////////////// Helper Functions ////////////////////////////
-
 /*Function: DHT_uS_Delay
   ---------------------------------------------------------
   Note:
   - Delay function that ticks with 1uS
   
   Param: 
-  - hdht DHT_Handle_t structure to be used
-  - Delay value in uS
+  - hdht, DHT_Handle_t structure to be used
+  - uS_Delay, delay value in uS
   
   Return Value: None
 */
@@ -168,32 +179,17 @@ void DHT_uS_Delay(DHT_Handle_t *hdht, uint16_t uS_Delay)
   while(hdht->dht_tim_instance->CNT <= uS_Delay);
 }
 
-/*Function: DHT_setInput
+/*Function: DHT_Check_Timeout
   ---------------------------------------------------------
   Note:
-  - Gets DHT structure state
+  - Checks whether DHT sensor timesout while reading pin
   
-  Param: hdht DHT_Handle_t structure to be used
+  Param:
+  - hdht, DHT_Handle_t structure to be used
+  - uSeconds, timeoout value in uSeconds
   
-  Return Value: DHT_State_t enum value
+  Return Value: none
 */
-
-void DHT_setInput(DHT_Handle_t *hdht)
-{
-  hdht->dht_gpio_init.Mode = GPIO_MODE_INPUT;
-  hdht->dht_gpio_init.Pull = GPIO_NOPULL;
-  hdht->dht_gpio_init.Pin  = hdht->dht_gpio_pin;
-  
-  HAL_GPIO_Init(hdht->dht_gpio_instance, &(hdht->dht_gpio_init));
-}
-void DHT_setOutput(DHT_Handle_t *hdht)
-{
-  hdht->dht_gpio_init.Mode = GPIO_MODE_OUTPUT_OD;
-  hdht->dht_gpio_init.Pull = GPIO_NOPULL;
-  hdht->dht_gpio_init.Pin  = hdht->dht_gpio_pin;
-  
-  HAL_GPIO_Init(hdht->dht_gpio_instance, &(hdht->dht_gpio_init));
-}
 
 void DHT_Check_Timeout(DHT_Handle_t *hdht,uint16_t uSeconds)
 {
@@ -205,6 +201,62 @@ void DHT_Check_Timeout(DHT_Handle_t *hdht,uint16_t uSeconds)
     hdht->timeout = 0;
   }
 }
+
+/*Function: DHT_setInput
+  ---------------------------------------------------------
+  Note:
+  - Sets GPIO pin as input
+  
+  Param:
+  - hdht, DHT_Handle_t structure to be used
+  
+  Return Value: none
+*/
+
+void DHT_setInput(DHT_Handle_t *hdht)
+{
+  hdht->dht_gpio_init.Mode = GPIO_MODE_INPUT;
+  hdht->dht_gpio_init.Pull = GPIO_NOPULL;
+  hdht->dht_gpio_init.Pin  = hdht->dht_gpio_pin;
+  
+  HAL_GPIO_Init(hdht->dht_gpio_instance, &(hdht->dht_gpio_init));
+}
+
+/*Function: DHT_setOutput
+  ---------------------------------------------------------
+  Note:
+  - Sets GPIO pin as output
+  
+  Param:
+  - hdht, DHT_Handle_t structure to be used
+  
+  Return Value: none
+*/
+
+void DHT_setOutput(DHT_Handle_t *hdht)
+{
+  hdht->dht_gpio_init.Mode = GPIO_MODE_OUTPUT_OD;
+  hdht->dht_gpio_init.Pull = GPIO_NOPULL;
+  hdht->dht_gpio_init.Pin  = hdht->dht_gpio_pin;
+  
+  HAL_GPIO_Init(hdht->dht_gpio_instance, &(hdht->dht_gpio_init));
+}
+
+
+
+/*Function: Master_Transmit_Start
+  ---------------------------------------------------------
+  Note:
+  - Microcontroller as master sends start sequence to DHT sensor to prepare data
+  - Depending on DHT sensor the timings for the sequence varies, but in general
+    the master data pin is set as output, then sends low for a few milliseconds
+    then high for ~25uS, finally it switches to input and gives up control of the pin
+  
+  Param:
+  - hdht, DHT_Handle_t structure to be used
+  
+  Return Value: none
+*/
 
 void Master_Transmit_Start(DHT_Handle_t *hdht)
 {
@@ -227,6 +279,19 @@ void Master_Transmit_Start(DHT_Handle_t *hdht)
     }
   }
 }
+
+/*Function: Slave_Receive_Response
+  ---------------------------------------------------------
+  Note:
+  - DHT sensor as slave responds to master that it has received the start signal
+  - The responce sequence is ~80uS low then ~80uS high, after which it will send 40 bits of data
+  
+  Param:
+  - hdht, DHT_Handle_t structure to be used
+  
+  Return Value: none
+*/
+
 void Slave_Receive_Response(DHT_Handle_t *hdht)
 {
   if((!HAL_GPIO_ReadPin((hdht->dht_gpio_instance),(hdht->dht_gpio_pin))) && (hdht->dht_state) == DHT_OK)
@@ -254,6 +319,19 @@ void Slave_Receive_Response(DHT_Handle_t *hdht)
   }
 }
 
+/*Function: Byte_Read
+  ---------------------------------------------------------
+  Note:
+  - DHT sensor as slave responds to master that it has received the start signal
+  - The responce sequence is ~80uS low then ~80uS high, after which it will send 40 bits of data
+  
+  Param:
+  - hdht, DHT_Handle_t structure to be used
+  - whichByte, which Byte in the 5byte(40 bits) is being decoded
+  
+  Return Value: none
+*/
+
 void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte)
 {
   for(uint8_t j = 0; j < 8; j++)
@@ -280,6 +358,18 @@ void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte)
     }
   }
 }
+
+/*Function: Checksum_Verify
+  ---------------------------------------------------------
+  Note:
+  - Verifies calculated checksum of first 4 bytes of buffer with sent DHT sensor checksum
+  - If checksum is successful the it prepares humidity array and temperature array
+  
+  Param:
+  - hdht, DHT_Handle_t structure to be used
+  
+  Return Value: none
+*/
 
 void Checksum_Verify(DHT_Handle_t *hdht)
 {

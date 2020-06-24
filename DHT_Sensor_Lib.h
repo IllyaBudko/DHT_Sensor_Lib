@@ -5,18 +5,6 @@
 #include <stdint.h>
 #include "main.h"
 
-/*
-  Function:
-  ---------------------------------------------------------
-  Description:
-  
-  Param:
-  
-  Return Value:
-*/
-
-
-
 typedef enum
 {
   DHT_OK,
@@ -43,24 +31,28 @@ typedef struct
 }DHT_Handle_t;
 
 /*
-  DHT Sensor APIs
+  DHT Sensor APIs  ====================================================================
 */
+
 __weak void DHT_OneWire_Init(DHT_Handle_t *hdht);
 __weak void DHT_Error_Handler(DHT_Handle_t *hdht);
 
 void DHT_Read(DHT_Handle_t *hdht);
-void DHT_uS_Delay(DHT_Handle_t *hdht, uint16_t uS_Delay);
 
 DHT_State_t DHT_Get_State(DHT_Handle_t *hdht);
 
+/*
+  DHT Helper function used inside APIs  ====================================================================
+*/
 
-/////////////////////// Helper Functions ////////////////////////////
+DHT_State_t DHT_Init(DHT_Handle_t *hdht);
+
+void DHT_uS_Delay(DHT_Handle_t *hdht, uint16_t uS_Delay);
+void DHT_Check_Timeout(DHT_Handle_t *hdht,uint16_t uSeconds);
+
 void DHT_setInput(DHT_Handle_t *hdht);
 void DHT_setOutput(DHT_Handle_t *hdht);
 
-void DHT_Check_Timeout(DHT_Handle_t *hdht,uint16_t uSeconds);
-
-DHT_State_t DHT_Init(DHT_Handle_t *hdht);
 void Master_Transmit_Start(DHT_Handle_t *hdht);
 void Slave_Receive_Response(DHT_Handle_t *hdht);
 void Byte_Read(DHT_Handle_t *hdht, uint8_t whichByte);
